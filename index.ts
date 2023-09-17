@@ -237,7 +237,7 @@ class Up implements Input2 {
 
 let playerx = 1;
 let playery = 1;
-let map: Tile[][] = [
+let rawMap: RawTile[][] = [
   [2, 2, 2, 2, 2, 2, 2, 2],
   [2, 3, 0, 1, 1, 2, 0, 2],
   [2, 4, 2, 6, 1, 2, 0, 2],
@@ -246,9 +246,46 @@ let map: Tile[][] = [
   [2, 2, 2, 2, 2, 2, 2, 2],
 ];
 
+let map: Tile2[][];
 let inputs: Input2[] = [];
 
-function remove(tile: Tile) {
+/**
+ * @description 테스트 중에 모든 가능한 경우를 다 검사하고 빠짐없이 테스트하는 것을 의미
+ */
+function assertExhausted(x: never): never {
+  throw Error("Unexpected object: " + x);
+}
+
+function transform(title: RawTile) {
+  switch(title) {
+    case RawTile.AIR: return new Air();
+    case RawTile.FLUX: return new Flux();
+    case RawTile.UNBREAKABLE: return new Unbreakable();
+    case RawTile.PLAYER: return new Player();
+    case RawTile.STONE: return new Stone();
+    case RawTile.FALLING_STONE: return new FallingStone();
+    case RawTile.BOX: return new Box();
+    case RawTile.FALLING_BOX: return new FallingBox();
+    case RawTile.KEY1: return new Key1();
+    case RawTile.LOCK1: return new Lock1();
+    case RawTile.KEY2: return new Key2();
+    case RawTile.LOCK2: return new Lock2();
+    default: return assertExhausted(title);
+  }
+}
+
+function transformMap() {
+  map = new Array(rawMap.length);
+  for (let y = 0; y < rawMap.length; y++) {
+    map[y] = new Array(rawMap[y].length);
+    for (let x = 0; x < rawMap[y].length; x++) {
+      map[y][x] = transform(rawMap[y][x]);
+    }
+  }
+}
+
+
+function remove(tile: Tile2) {
   for (let y = 0; y < map.length; y++) {
     for (let x = 0; x < map[y].length; x++) {
       if (map[y][x] === tile) {
@@ -411,6 +448,7 @@ function gameLoop() {
 }
 
 window.onload = () => {
+  transformMap();
   gameLoop();
 }
 
