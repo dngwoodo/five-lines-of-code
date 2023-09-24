@@ -204,18 +204,43 @@ class Box implements Tile {
   isLock2() { return false; }
 }
 
-class Key1 implements Tile {
+class KeyConfiguration {
+  constructor(
+    private color: string,
+    private _1: boolean,
+    private removeStrategy: RemoveStrategy
+  ) {}
+
+  getColor() {
+    return this.color;
+  }
+  is1() {
+    return this._1;
+  }
+  getRemoveStrategy() {
+    return this.removeStrategy;
+  }
+}
+
+class Key implements Tile {
+  constructor(
+    private keyConf: KeyConfiguration
+  ) {}
+
   update() {}
   isFalling() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
-    g.fillStyle = "#ffcc00";
+    g.fillStyle = this.keyConf.getColor();
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
   }
   isEdible() { return false; };
   isPushable() { return false; }
-  moveHorizontal(dx: number): void {}
+  moveHorizontal(dx: number): void {
+    remove(this.keyConf.getRemoveStrategy());
+    moveToTile(playerx + dx, playery);
+  }
   isAir() { return false; }
   isFlux() { return false; }
   isFallingBox() { return false; }
@@ -224,14 +249,19 @@ class Key1 implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return false; }
+
 }
-class Lock1 implements Tile {
+
+class LockC implements Tile {
+  constructor(
+    private keyConf: KeyConfiguration
+  ) {}
   update() {}
   isFalling() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
-    g.fillStyle = "#ffcc00";
+    g.fillStyle = this.keyConf.getColor();
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
   }
   isEdible() { return false; };
@@ -242,51 +272,9 @@ class Lock1 implements Tile {
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return false; }
-  isLock1() { return true; }
+  isLock1() { return this.keyConf.is1(); }
   isKey2() { return false; }
-  isLock2() { return false; }
-}
-class Key2 implements Tile {
-  update() {}
-  isFalling() {
-    return false;
-  }
-  draw(g: CanvasRenderingContext2D, x: number, y: number) {
-    g.fillStyle = "#00ccff";
-    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-  }
-  isEdible() { return false; };
-  isPushable() { return false; }
-  moveHorizontal(dx: number): void {}
-  isAir() { return false; }
-  isFlux() { return false; }
-  isFallingBox() { return false; }
-  isFallingStone() { return false; }
-  isKey1() { return false; }
-  isLock1() { return false; }
-  isKey2() { return true; }
-  isLock2() { return false; }
-}
-class Lock2 implements Tile {
-  update() {}
-  isFalling() {
-    return false;
-  }
-  draw(g: CanvasRenderingContext2D, x: number, y: number) {
-    g.fillStyle = "#00ccff";
-    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-  }
-  isEdible() { return false; };
-  isPushable() { return false; }
-  moveHorizontal(dx: number): void {}
-  isAir() { return false; }
-  isFlux() { return false; }
-  isFallingBox() { return false; }
-  isFallingStone() { return false; }
-  isKey1() { return false; }
-  isLock1() { return false; }
-  isKey2() { return false; }
-  isLock2() { return true; }
+  isLock2() { return !this.keyConf.is1(); }
 }
 
 class FallStrategy {
@@ -389,7 +377,10 @@ class Resting implements FallingState {
 }
 
 
-function transform(title: RawTile) {
+function transformTile(title: RawTile) {
+  const YELLOW_KEY = new KeyConfiguration("#ffcc00", true, new RemoveLock1());
+  const BLUE_KEY = new KeyConfiguration("#00ccff", false, new RemoveLock2());
+
   switch(title) {
     case RawTile.AIR: return new Air();
     case RawTile.FLUX: return new Flux();
@@ -399,10 +390,10 @@ function transform(title: RawTile) {
     case RawTile.FALLING_STONE: return new Stone(new Falling());
     case RawTile.BOX: return new Box(new Resting());
     case RawTile.FALLING_BOX: return new Box(new Falling());
-    case RawTile.KEY1: return new Key1();
-    case RawTile.LOCK1: return new Lock1();
-    case RawTile.KEY2: return new Key2();
-    case RawTile.LOCK2: return new Lock2();
+    case RawTile.KEY1: return new Key(YELLOW_KEY);
+    case RawTile.LOCK1: return new LockC(YELLOW_KEY);
+    case RawTile.KEY2: return new Key(BLUE_KEY);
+    case RawTile.LOCK2: return new LockC(BLUE_KEY);
     default: return assertExhausted(title);
   }
 }
@@ -412,7 +403,7 @@ function transformMap() {
   for (let y = 0; y < rawMap.length; y++) {
     map[y] = new Array(rawMap[y].length);
     for (let x = 0; x < rawMap[y].length; x++) {
-      map[y][x] = transform(rawMap[y][x]);
+      map[y][x] = transformTile(rawMap[y][x]);
     }
   }
 }
