@@ -35,16 +35,18 @@ interface Tile {
   isEdible(): boolean;
   isPushable(): boolean;
   moveHorizontal(dx: number): void;
-  isBoxy(): boolean;
-  isStony(): boolean;
   drop(): void;
   rest(): void;
   isFalling(): boolean;
+  canFall(): boolean;
 }
 
 class Air implements Tile {
   drop() {}
   rest() {}
+  canFall() {
+    return false;
+  }
   isFalling() {
     return false;
   }
@@ -70,12 +72,13 @@ class Air implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return false; }
-  isStony() { return false; }
-  isBoxy() { return false; }
 }
 class Flux implements Tile {
   drop() {}
   rest() {}
+  canFall() {
+    return false;
+  }
   isFalling() {
     return false;
   }
@@ -104,13 +107,14 @@ class Flux implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return false; }
-  isStony() { return false; }
-  isBoxy() { return false; }
 }
 class Unbreakable implements Tile {
   drop() {}
   rest() {}
   isFalling() {
+    return false;
+  }
+  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -136,12 +140,13 @@ class Unbreakable implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return false; }
-  isStony() { return false; }
-  isBoxy() { return false; }
 }
 class Player implements Tile {
   drop() {}
   rest() {}
+  canFall() {
+    return false;
+  }
   isFalling() {
     return false;
   }
@@ -165,8 +170,6 @@ class Player implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return false; }
-  isStony() { return false; }
-  isBoxy() { return false; }
 }
 class Stone implements Tile {
   
@@ -176,6 +179,9 @@ class Stone implements Tile {
   }
   rest() {
     this.falling = new Resting();
+  }
+  canFall() {
+    return true;
   }
   isFalling() {
     return this.falling.isFalling();
@@ -206,9 +212,6 @@ class Stone implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return false; }
-  isStony() { return true; }
-  isBoxy() { return false; }
-  
 }
 
 class Box implements Tile {
@@ -218,6 +221,9 @@ class Box implements Tile {
   }
   rest() {
     this.falling = new Resting();
+  }
+  canFall() {
+    return true;
   }
   isFalling() {
     return this.falling.isFalling();
@@ -247,14 +253,15 @@ class Box implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return false; }
-  isStony() { return false; }
-  isBoxy() { return true; }
 }
 
 class Key1 implements Tile {
   drop() {}
   rest() {}
   isFalling() {
+    return false;
+  }
+  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -276,13 +283,14 @@ class Key1 implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return false; }
-  isStony() { return false; }
-  isBoxy() { return false; }
 }
 class Lock1 implements Tile {
   drop() {}
   rest() {}
   isFalling() {
+    return false;
+  }
+  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -304,13 +312,14 @@ class Lock1 implements Tile {
   isLock1() { return true; }
   isKey2() { return false; }
   isLock2() { return false; }
-  isStony() { return false; }
-  isBoxy() { return false; }
 }
 class Key2 implements Tile {
   drop() {}
   rest() {}
   isFalling() {
+    return false;
+  }
+  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -332,13 +341,14 @@ class Key2 implements Tile {
   isLock1() { return false; }
   isKey2() { return true; }
   isLock2() { return false; }
-  isStony() { return false; }
-  isBoxy() { return false; }
 }
 class Lock2 implements Tile {
   drop() {}
   rest() {}
   isFalling() {
+    return false;
+  }
+  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -360,8 +370,6 @@ class Lock2 implements Tile {
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return true; }
-  isStony() { return false; }
-  isBoxy() { return false; }
 }
 
 enum Input {
@@ -562,10 +570,7 @@ function updateMap() {
 }
 
 function updateTile(x: number, y: number) {
-  if (
-    ((map[y][x].isStony()) && map[y + 1][x].isAir()) || 
-    ((map[y][x].isBoxy()) && map[y + 1][x].isAir())
-  ) {
+  if (map[y][x].canFall() && map[y + 1][x].isAir()) {
     map[y][x].drop(); // 돌이나 상자를 떨어트리고(falling 상태 변경)
     map[y + 1][x] = map[y][x]; // 타일을 교체한 후
     map[y][x] = new Air(); // 새로 공기를 주입
