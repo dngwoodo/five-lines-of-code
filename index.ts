@@ -33,9 +33,13 @@ interface Tile {
   isPushable(): boolean;
   moveHorizontal(dx: number): void;
   isFalling(): boolean;
+  getBlockOnTopState(): FallingState;
 }
 
 class Air implements Tile {
+  getBlockOnTopState() {
+    return new Falling();
+  }
   update() {}
   isFalling() {
     return false;
@@ -60,6 +64,9 @@ class Air implements Tile {
   isLock2() { return false; }
 }
 class Flux implements Tile {
+  getBlockOnTopState() {
+    return new Resting();
+  }
   update() {}
   isFalling() {
     return false;
@@ -87,6 +94,9 @@ class Flux implements Tile {
   isLock2() { return false; }
 }
 class Unbreakable implements Tile {
+  getBlockOnTopState() {
+    return new Resting();
+  }
   update() {}
   isFalling() {
     return false;
@@ -112,6 +122,9 @@ class Unbreakable implements Tile {
   isLock2() { return false; }
 }
 class Player implements Tile {
+  getBlockOnTopState() {
+    return new Resting();
+  }
   update() {}
   isFalling() {
     return false;
@@ -140,6 +153,9 @@ class Stone implements Tile {
   constructor(private falling: FallingState) {
     this.fallStrategy = new FallStrategy(falling);
   }
+  getBlockOnTopState() {
+    return new Resting();
+  }
   update(x: number, y: number) {
     this.fallStrategy.update(x, y, this);
   }
@@ -158,7 +174,7 @@ class Stone implements Tile {
     return true;
   }
   moveHorizontal(dx: number): void {
-    this.fallStrategy.getFalling().moveHorizontal(this, dx);
+    this.fallStrategy.moveHorizontal(this, dx);
   }
   isAir() { return false; }
   isFlux() { return false; }
@@ -174,6 +190,9 @@ class Box implements Tile {
   private fallStrategy: FallStrategy;
   constructor(private falling: FallingState) {
     this.fallStrategy = new FallStrategy(falling);
+  }
+  getBlockOnTopState() {
+    return new Resting();
   }
   update(x: number, y: number) {
     this.fallStrategy.update(x, y, this);
@@ -192,7 +211,7 @@ class Box implements Tile {
     return true;
   }
   moveHorizontal(dx: number): void {
-    this.falling.moveHorizontal(this, dx)
+    this.fallStrategy.moveHorizontal(this, dx);
   }
   isAir() { return false; }
   isFlux() { return false; }
@@ -210,10 +229,6 @@ class KeyConfiguration {
     private _1: boolean,
     private removeStrategy: RemoveStrategy
   ) {}
-
-  private getColor() {
-    return this.color;
-  }
   // 해당 메서드는 문제가 되는 setter 가 아니다.
   setColor(g: CanvasRenderingContext2D) {
     g.fillStyle = this.color;
@@ -233,6 +248,10 @@ class Key implements Tile {
   constructor(
     private keyConf: KeyConfiguration
   ) {}
+
+  getBlockOnTopState() {
+    return new Falling();
+  }
 
   update() {}
   isFalling() {
@@ -263,6 +282,9 @@ class LockC implements Tile {
   constructor(
     private keyConf: KeyConfiguration
   ) {}
+  getBlockOnTopState() {
+    return new Resting();
+  }
   update() {}
   isFalling() {
     return false;
@@ -288,19 +310,12 @@ class FallStrategy {
   constructor(private falling: FallingState) {
 
   }
-  getFalling() {
-    return this.falling;
+  moveHorizontal(tile: Tile, dx: number) {
+    this.falling.moveHorizontal(tile, dx);
   }
   update(x: number, y:number, tile: Tile) {
     this.falling = map[y + 1][x].isAir() ? new Falling() : new Resting();
-    this.drop(x, y, tile);
-  }
-  private drop(x: number, y: number, tile: Tile) {
-    if (map[y + 1][x].isAir()) {
-      map[y + 1][x] = tile; // 타일을 교체한 후
-      map[y][x] = new Air(); // 새로 공기를 주입
-      return;
-    }
+    this.falling.drop(tile, x, y);
   }
 }
 
@@ -360,6 +375,12 @@ function assertExhausted(x: never): never {
 interface FallingState {
   isFalling(): boolean;
   moveHorizontal(tile: Tile, dx: number): void;
+  /**
+   * FallingStrategy 에서 옮긴 메서드
+   * FallingStrategy.drop 에서 사용된 if 문이 FallingState 와 연관이 있어 옮김.
+   * 옮기게 되면 삼항 연산자에서 사용된 else 문도 사라지게 됨. 
+   */
+  drop(tile: Tile, x: number, y: number): void;
 }
 
 class Falling implements FallingState {
@@ -368,6 +389,10 @@ class Falling implements FallingState {
   }
 
   moveHorizontal() {}
+  drop(tile: Tile, x: number, y: number) {
+    map[y + 1][x] = tile; // 타일을 교체한 후
+    map[y][x] = new Air(); // 새로 공기를 주입
+  }
 }
 
 class Resting implements FallingState {
@@ -381,6 +406,8 @@ class Resting implements FallingState {
       moveToTile(playerx + dx, playery);
     }
   }
+
+  drop() {}
 }
 
 
