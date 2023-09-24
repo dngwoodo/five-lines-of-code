@@ -144,10 +144,7 @@ class Player {
     g.fillRect(this.x * TILE_SIZE, this.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
   }
   pushHorizontal(tile: Tile, dx: number) {
-    if (map.isAir(this.x + dx + dx, this.y) && map.isAir(this.x + dx, this.y + 1)) {
-      map.setTile(this.x + dx + dx, this.y, tile);
-      this.moveToTile(this.x + dx, this.y);
-    }
+    map.pushHorizontal(tile, dx, this.x, this.y);
   }
   move(dx: number, dy: number) {
     this.moveToTile(this.x + dx, this.y + dy);
@@ -424,11 +421,21 @@ class Map {
   setMap(map: Tile[][]) {
     this.map = map;
   }
-  setTile(x: number, y: number, tile: Tile) {
+  private setTile(x: number, y: number, tile: Tile) {
     this.map[y][x] = tile;
+  }
+  drop(x: number, y: number, tile: Tile) {
+    this.setTile(x, y + 1, tile); // 아래로 한칸 이동
+    this.setTile(x, y, new Air()); // 현재 위치 빈공간으로 변경
   }
   isAir(x: number, y: number) {
     return this.map[y][x].isAir();
+  }
+  pushHorizontal(tile: Tile, dx: number, x: number, y: number) {
+    if (this.isAir(x + dx + dx, y) && !this.isAir(x + dx, y + 1)) {
+      this.setTile(x + dx + dx, y, tile);
+      player.moveToTile(x + dx, y);
+    }
   }
   draw(g: CanvasRenderingContext2D) {
     for (let y = 0; y < this.map.length; y++) {
@@ -504,8 +511,7 @@ class Falling implements FallingState {
 
   moveHorizontal() {}
   drop(tile: Tile, x: number, y: number) {
-    map.setTile(x, y + 1, tile); // 아래로 한칸 이동
-    map.setTile(x, y, new Air()); // 현재 위치 빈공간으로 변경
+    map.drop(x, y, tile);
   }
 }
 
