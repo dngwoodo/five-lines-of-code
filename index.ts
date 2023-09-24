@@ -147,7 +147,7 @@ class Player implements Tile {
   isBoxy() { return false; }
 }
 class Stone implements Tile {
-  constructor(private readonly falling: keyof typeof FallingState) {}
+  constructor(private readonly falling: FallingState) {}
 
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#0000cc";
@@ -174,7 +174,7 @@ class Stone implements Tile {
   isStone() { return true; }
   isBox() { return false; }
   isFallingBox() { return false; }
-  isFallingStone() { return this.falling === FallingState.FALLING; }
+  isFallingStone() { return this.falling.isFalling() }
   isKey1() { return false; }
   isLock1() { return false; }
   isKey2() { return false; }
@@ -385,10 +385,31 @@ function assertExhausted(x: never): never {
   throw Error("Unexpected object: " + x);
 }
 
-const FallingState = {
-  FALLING: 'FALLING',
-  RESTING: 'RESTING',
-} as const
+interface FallingState {
+  isFalling(): boolean;
+  isResting(): boolean;
+}
+
+class Falling implements FallingState {
+  isFalling() {
+    return true;
+  }
+
+  isResting() {
+    return false;
+  }
+}
+
+class Resting implements FallingState {
+  isFalling() {
+    return false;
+  }
+
+  isResting() {
+    return true;
+  }
+}
+
 
 function transform(title: RawTile) {
   switch(title) {
@@ -396,8 +417,8 @@ function transform(title: RawTile) {
     case RawTile.FLUX: return new Flux();
     case RawTile.UNBREAKABLE: return new Unbreakable();
     case RawTile.PLAYER: return new Player();
-    case RawTile.STONE: return new Stone(FallingState.RESTING);
-    case RawTile.FALLING_STONE: return new Stone(FallingState.FALLING);
+    case RawTile.STONE: return new Stone(new Resting());
+    case RawTile.FALLING_STONE: return new Stone(new Falling());
     case RawTile.BOX: return new Box();
     case RawTile.FALLING_BOX: return new FallingBox();
     case RawTile.KEY1: return new Key1();
