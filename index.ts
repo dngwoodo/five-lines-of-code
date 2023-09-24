@@ -160,12 +160,7 @@ class Stone implements Tile {
     return true;
   }
   moveHorizontal(dx: number): void {
-    if(this.isFallingStone() === false) {
-      if (map[playery][playerx + dx + dx].isAir() && !map[playery + 1][playerx + dx].isAir()) {
-        map[playery][playerx + dx + dx] = this;
-        moveToTile(playerx + dx, playery);
-      }
-    } else if(this.isFallingStone() === true) {}
+    this.falling.moveHorizontal(this, dx);
   }
   isAir() { return false; }
   isFlux() { return false; }
@@ -388,6 +383,8 @@ function assertExhausted(x: never): never {
 interface FallingState {
   isFalling(): boolean;
   isResting(): boolean;
+
+  moveHorizontal(tile: Tile, dx: number): void;
 }
 
 class Falling implements FallingState {
@@ -398,6 +395,8 @@ class Falling implements FallingState {
   isResting() {
     return false;
   }
+
+  moveHorizontal() {}
 }
 
 class Resting implements FallingState {
@@ -407,6 +406,13 @@ class Resting implements FallingState {
 
   isResting() {
     return true;
+  }
+
+  moveHorizontal(tile: Tile, dx: number) {
+    if (map[playery][playerx + dx + dx].isAir() && !map[playery + 1][playerx + dx].isAir()) {
+      map[playery][playerx + dx + dx] = tile;
+      moveToTile(playerx + dx, playery);
+    }
   }
 }
 
@@ -536,7 +542,7 @@ function updateTitle(x: number, y: number) {
     map[y + 1][x].isFallingBox();
     map[y][x].isAir();
   } else if (map[y][x].isFallingStone()) {
-    map[y][x] = new Stone(false);
+    map[y][x] = new Stone(new Resting());
   } else if (map[y][x].isFallingBox()) {
     map[y][x] = new Box();
   }
