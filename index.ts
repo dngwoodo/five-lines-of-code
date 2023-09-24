@@ -19,6 +19,7 @@ enum RawTile {
 }
 
 interface Tile {
+  update(x: number, y: number): void;
   isAir(): boolean;
   isFlux(): boolean;
   isUnbreakable(): boolean;
@@ -42,6 +43,7 @@ interface Tile {
 }
 
 class Air implements Tile {
+  update() {}
   drop() {}
   rest() {}
   canFall() {
@@ -74,6 +76,7 @@ class Air implements Tile {
   isLock2() { return false; }
 }
 class Flux implements Tile {
+  update() {}
   drop() {}
   rest() {}
   canFall() {
@@ -109,6 +112,7 @@ class Flux implements Tile {
   isLock2() { return false; }
 }
 class Unbreakable implements Tile {
+  update() {}
   drop() {}
   rest() {}
   isFalling() {
@@ -142,6 +146,7 @@ class Unbreakable implements Tile {
   isLock2() { return false; }
 }
 class Player implements Tile {
+  update() {}
   drop() {}
   rest() {}
   canFall() {
@@ -174,6 +179,15 @@ class Player implements Tile {
 class Stone implements Tile {
   
   constructor(private falling: FallingState) {}
+  update(x: number, y: number) {
+    if (map[y + 1][x].isAir()) {
+      map[y][x].drop(); // 돌이나 상자를 떨어트리고(falling 상태 변경)
+      map[y + 1][x] = map[y][x]; // 타일을 교체한 후
+      map[y][x] = new Air(); // 새로 공기를 주입
+    } else if (map[y][x].isFalling()) {
+      map[y][x].rest();
+    }
+  }
   drop() {
     this.falling = new Falling();
   }
@@ -216,6 +230,15 @@ class Stone implements Tile {
 
 class Box implements Tile {
   constructor(private falling: FallingState) {}
+  update(x: number, y: number) {
+    if (map[y + 1][x].isAir()) {
+      map[y][x].drop(); // 돌이나 상자를 떨어트리고(falling 상태 변경)
+      map[y + 1][x] = map[y][x]; // 타일을 교체한 후
+      map[y][x] = new Air(); // 새로 공기를 주입
+    } else if (map[y][x].isFalling()) {
+      map[y][x].rest();
+    }
+  }
   drop() {
     this.falling = new Falling();
   }
@@ -256,6 +279,7 @@ class Box implements Tile {
 }
 
 class Key1 implements Tile {
+  update() {}
   drop() {}
   rest() {}
   isFalling() {
@@ -285,6 +309,7 @@ class Key1 implements Tile {
   isLock2() { return false; }
 }
 class Lock1 implements Tile {
+  update() {}
   drop() {}
   rest() {}
   isFalling() {
@@ -314,6 +339,7 @@ class Lock1 implements Tile {
   isLock2() { return false; }
 }
 class Key2 implements Tile {
+  update() {}
   drop() {}
   rest() {}
   isFalling() {
@@ -343,6 +369,7 @@ class Key2 implements Tile {
   isLock2() { return false; }
 }
 class Lock2 implements Tile {
+  update() {}
   drop() {}
   rest() {}
   isFalling() {
@@ -570,13 +597,7 @@ function updateMap() {
 }
 
 function updateTile(x: number, y: number) {
-  if (map[y][x].canFall() && map[y + 1][x].isAir()) {
-    map[y][x].drop(); // 돌이나 상자를 떨어트리고(falling 상태 변경)
-    map[y + 1][x] = map[y][x]; // 타일을 교체한 후
-    map[y][x] = new Air(); // 새로 공기를 주입
-  } else if (map[y][x].isFalling()) {
-    map[y][x].rest();
-  }
+  map[y][x].update(x, y);
 }
 
 function draw() {
