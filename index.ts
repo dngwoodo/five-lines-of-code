@@ -425,6 +425,30 @@ class Map {
   setMap(map: Tile[][]) {
     this.map = map;
   }
+  draw(g: CanvasRenderingContext2D) {
+    for (let y = 0; y < this.map.length; y++) {
+      for (let x = 0; x < this.map[y].length; x++) {
+        this.map[y][x].draw(g, x, y);
+      }
+    }
+  }
+  transform() {
+    this.map = new Array(rawMap.length);
+  
+    for (let y = 0; y < rawMap.length; y++) {
+      this.map[y] = new Array(rawMap[y].length);
+      for (let x = 0; x < rawMap[y].length; x++) {
+        this.map[y][x] = transformTile(rawMap[y][x]);
+      }
+    }
+  }
+  update() {
+    for (let y = this.map.length - 1; y >= 0; y--) {
+      for (let x = 0; x < this.map[y].length; x++) {
+        this.map[y][x].update(x, y);
+      }
+    } 
+  }
 }
 
 
@@ -495,17 +519,6 @@ function transformTile(title: RawTile) {
   }
 }
 
-function transformMap() {
-  map.setMap(new Array(rawMap.length));
-
-  for (let y = 0; y < rawMap.length; y++) {
-    map.getMap()[y] = new Array(rawMap[y].length);
-    for (let x = 0; x < rawMap[y].length; x++) {
-      map.getMap()[y][x] = transformTile(rawMap[y][x]);
-    }
-  }
-}
-
 interface RemoveStrategy {
   check(tile: Tile): boolean;
 }
@@ -539,7 +552,7 @@ function moveToTile(newx: number, newy: number) {
 function update() {
   handleInputs();
 
-  updateMap();
+  map.update();
 }
 
 function handleInputs() {
@@ -549,21 +562,9 @@ function handleInputs() {
   }
 }
 
-function updateMap() {
-  for (let y = map.getMap().length - 1; y >= 0; y--) {
-    for (let x = 0; x < map.getMap()[y].length; x++) {
-      updateTile(x, y);
-    }
-  } 
-}
-
-function updateTile(x: number, y: number) {
-  map.getMap()[y][x].update(x, y);
-}
-
 function draw() {
   let g = createGraphics();
-  drawMap(g);
+  map.draw(g);
   drawPlayer(g);
 }
 
@@ -579,14 +580,6 @@ function drawPlayer(g: CanvasRenderingContext2D) {
   player.draw(g);
 }
 
-function drawMap(g: CanvasRenderingContext2D) {
-  for (let y = 0; y < map.getMap().length; y++) {
-    for (let x = 0; x < map.getMap()[y].length; x++) {
-      map.getMap()[y][x].draw(g, x, y);
-    }
-  }
-}
-
 function gameLoop() {
   let before = Date.now();
   update();
@@ -598,7 +591,7 @@ function gameLoop() {
 }
 
 window.onload = () => {
-  transformMap();
+  map.transform();
   gameLoop();
 }
 
