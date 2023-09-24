@@ -211,14 +211,21 @@ class KeyConfiguration {
     private removeStrategy: RemoveStrategy
   ) {}
 
-  getColor() {
+  private getColor() {
     return this.color;
+  }
+  // 해당 메서드는 문제가 되는 setter 가 아니다.
+  setColor(g: CanvasRenderingContext2D) {
+    g.fillStyle = this.color;
+  }
+  setFillRect(g: CanvasRenderingContext2D, x: number, y: number) {
+    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
   }
   is1() {
     return this._1;
   }
-  getRemoveStrategy() {
-    return this.removeStrategy;
+  removeLock() {
+    remove(this.removeStrategy);
   }
 }
 
@@ -232,13 +239,13 @@ class Key implements Tile {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
-    g.fillStyle = this.keyConf.getColor();
-    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    this.keyConf.setColor(g);
+    this.keyConf.setFillRect(g, x, y);
   }
   isEdible() { return false; };
   isPushable() { return false; }
   moveHorizontal(dx: number): void {
-    remove(this.keyConf.getRemoveStrategy());
+    this.keyConf.removeLock();
     moveToTile(playerx + dx, playery);
   }
   isAir() { return false; }
@@ -261,8 +268,8 @@ class LockC implements Tile {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
-    g.fillStyle = this.keyConf.getColor();
-    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    this.keyConf.setColor(g);
+    this.keyConf.setFillRect(g, x, y)
   }
   isEdible() { return false; };
   isPushable() { return false; }
