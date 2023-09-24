@@ -556,18 +556,18 @@ function handleInputs() {
 function updateMap() {
   for (let y = map.length - 1; y >= 0; y--) {
     for (let x = 0; x < map[y].length; x++) {
-      updateTitle(x, y);
+      updateTile(x, y);
     }
   } 
 }
 
-function updateTitle(x: number, y: number) {
+function updateTile(x: number, y: number) {
   if ((map[y][x].isStony()) && map[y + 1][x].isAir()) {
-    map[y + 1][x].isFallingStone();
-    map[y][x].isAir();
+    map[y + 1][x] = new Stone(new Falling());
+    map[y][x] = new Air();
   } else if ((map[y][x].isBoxy()) && map[y + 1][x].isAir()) {
-    map[y + 1][x].isFallingBox();
-    map[y][x].isAir();
+    map[y + 1][x] = new Box(new Falling());
+    map[y][x] = new Air();
   } else if (map[y][x].isFalling()) {
     map[y][x].rest();
   }
