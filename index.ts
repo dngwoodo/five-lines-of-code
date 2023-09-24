@@ -18,7 +18,7 @@ enum RawTile {
   LOCK2
 }
 
-interface Tile2 {
+interface Tile {
   isAir(): boolean;
   isFlux(): boolean;
   isUnbreakable(): boolean;
@@ -40,7 +40,7 @@ interface Tile2 {
 
 }
 
-class Air implements Tile2 {
+class Air implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {}
   isEdible() {
     return true;
@@ -66,7 +66,7 @@ class Air implements Tile2 {
   isStony() { return false; }
   isBoxy() { return false; }
 }
-class Flux implements Tile2 {
+class Flux implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#ccffcc";
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -95,7 +95,7 @@ class Flux implements Tile2 {
   isStony() { return false; }
   isBoxy() { return false; }
 }
-class Unbreakable implements Tile2 {
+class Unbreakable implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#999999";
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -122,7 +122,7 @@ class Unbreakable implements Tile2 {
   isStony() { return false; }
   isBoxy() { return false; }
 }
-class Player implements Tile2 {
+class Player implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {}
   isEdible() {
     return false;
@@ -146,8 +146,8 @@ class Player implements Tile2 {
   isStony() { return false; }
   isBoxy() { return false; }
 }
-class Stone implements Tile2 {
-  constructor(private readonly falling: boolean ) {}
+class Stone implements Tile {
+  constructor(private readonly falling: keyof typeof FallingState) {}
 
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#0000cc";
@@ -174,7 +174,7 @@ class Stone implements Tile2 {
   isStone() { return true; }
   isBox() { return false; }
   isFallingBox() { return false; }
-  isFallingStone() { return this.falling; }
+  isFallingStone() { return this.falling === FallingState.FALLING; }
   isKey1() { return false; }
   isLock1() { return false; }
   isKey2() { return false; }
@@ -184,7 +184,7 @@ class Stone implements Tile2 {
   
 }
 
-class Box implements Tile2 {
+class Box implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#8b4513";
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -216,7 +216,7 @@ class Box implements Tile2 {
   isStony() { return false; }
   isBoxy() { return true; }
 }
-class FallingBox implements Tile2 {
+class FallingBox implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#8b4513";
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -239,7 +239,7 @@ class FallingBox implements Tile2 {
   isStony() { return false; }
   isBoxy() { return true; }
 }
-class Key1 implements Tile2 {
+class Key1 implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#ffcc00";
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -262,7 +262,7 @@ class Key1 implements Tile2 {
   isStony() { return false; }
   isBoxy() { return false; }
 }
-class Lock1 implements Tile2 {
+class Lock1 implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#ffcc00";
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -285,7 +285,7 @@ class Lock1 implements Tile2 {
   isStony() { return false; }
   isBoxy() { return false; }
 }
-class Key2 implements Tile2 {
+class Key2 implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#00ccff";
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -308,7 +308,7 @@ class Key2 implements Tile2 {
   isStony() { return false; }
   isBoxy() { return false; }
 }
-class Lock2 implements Tile2 {
+class Lock2 implements Tile {
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
     g.fillStyle = "#00ccff";
     g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -375,7 +375,7 @@ let rawMap: RawTile[][] = [
   [2, 2, 2, 2, 2, 2, 2, 2],
 ];
 
-let map: Tile2[][];
+let map: Tile[][];
 let inputs: Input2[] = [];
 
 /**
@@ -385,14 +385,19 @@ function assertExhausted(x: never): never {
   throw Error("Unexpected object: " + x);
 }
 
+const FallingState = {
+  FALLING: 'FALLING',
+  RESTING: 'RESTING',
+} as const
+
 function transform(title: RawTile) {
   switch(title) {
     case RawTile.AIR: return new Air();
     case RawTile.FLUX: return new Flux();
     case RawTile.UNBREAKABLE: return new Unbreakable();
     case RawTile.PLAYER: return new Player();
-    case RawTile.STONE: return new Stone(false);
-    case RawTile.FALLING_STONE: return new Stone(true);
+    case RawTile.STONE: return new Stone(FallingState.RESTING);
+    case RawTile.FALLING_STONE: return new Stone(FallingState.FALLING);
     case RawTile.BOX: return new Box();
     case RawTile.FALLING_BOX: return new FallingBox();
     case RawTile.KEY1: return new Key1();
@@ -414,7 +419,7 @@ function transformMap() {
 }
 
 
-function remove(tile: Tile2) {
+function remove(tile: Tile) {
   for (let y = 0; y < map.length; y++) {
     for (let x = 0; x < map[y].length; x++) {
       if (map[y][x] === tile) {
