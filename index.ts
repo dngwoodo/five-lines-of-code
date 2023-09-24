@@ -3,20 +3,150 @@ const TILE_SIZE = 30;
 const FPS = 30;
 const SLEEP = 1000 / FPS;
 
-enum RawTile {
-  AIR,
-  FLUX,
-  UNBREAKABLE,
-  PLAYER,
-  STONE, 
-  FALLING_STONE,
-  BOX, 
-  FALLING_BOX,
-  KEY1, 
-  LOCK1,
-  KEY2, 
-  LOCK2
+class KeyConfiguration {
+  constructor(
+    private color: string,
+    private _1: boolean,
+    private removeStrategy: RemoveStrategy
+  ) {}
+  // 해당 메서드는 문제가 되는 setter 가 아니다.
+  setColor(g: CanvasRenderingContext2D) {
+    g.fillStyle = this.color;
+  }
+  setFillRect(g: CanvasRenderingContext2D, x: number, y: number) {
+    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+  }
+  is1() {
+    return this._1;
+  }
+  removeLock() {
+    map.remove(this.removeStrategy);
+  }
 }
+
+interface RemoveStrategy {
+  check(tile: Tile): boolean;
+}
+
+class RemoveLock1 implements RemoveStrategy {
+  check(tile: Tile) {
+    return tile.isLock1();
+  }
+}
+
+class RemoveLock2 implements RemoveStrategy {
+  check(tile: Tile) {
+    return tile.isLock2();
+  }
+}
+
+const YELLOW_KEY = new KeyConfiguration("#ffcc00", true, new RemoveLock1());
+const BLUE_KEY = new KeyConfiguration("#00ccff", false, new RemoveLock2());
+
+interface FallingState {
+  isFalling(): boolean;
+  moveHorizontal(tile: Tile, dx: number): void;
+  /**
+   * FallingStrategy 에서 옮긴 메서드
+   * FallingStrategy.drop 에서 사용된 if 문이 FallingState 와 연관이 있어 옮김.
+   * 옮기게 되면 삼항 연산자에서 사용된 else 문도 사라지게 됨. 
+   */
+  drop(tile: Tile, x: number, y: number): void;
+}
+
+class Falling implements FallingState {
+  isFalling() {
+    return true;
+  }
+
+  moveHorizontal() {}
+  drop(tile: Tile, x: number, y: number) {
+    map.drop(x, y, tile);
+  }
+}
+
+class Resting implements FallingState {
+  isFalling() {
+    return false;
+  }
+
+  moveHorizontal(tile: Tile, dx: number) {
+    player.pushHorizontal(tile, dx);
+  }
+
+  drop() {}
+}
+
+interface RawTileValue {
+  transform(): Tile;
+}
+class AirValue implements RawTileValue {
+  transform() { return new Air(); }
+}
+class FluxValue implements RawTileValue {
+  transform() { return new Flux(); }
+}
+class UnbreakableValue implements RawTileValue {
+  transform() { return new Unbreakable(); }
+}
+class PlayerValue implements RawTileValue {
+  transform() { return new PlayerTile(); }
+}
+class StoneValue implements RawTileValue {
+  transform() { return new Stone(new Resting()); }
+}
+class FallingStoneValue implements RawTileValue {
+  transform() { return new Stone(new Falling()); }
+}
+class BoxValue implements RawTileValue {
+  transform() { return new Box(new Resting()); }
+}
+class FallingBoxValue implements RawTileValue {
+  transform() { return new Box(new Falling()); }
+}
+class Key1Value implements RawTileValue {
+  transform() { return new Key(YELLOW_KEY); }
+}
+class Lock1Value implements RawTileValue {
+  transform() { return new LockC(YELLOW_KEY); }
+}
+class Key2Value implements RawTileValue {
+  transform() { return new Key(BLUE_KEY); }
+}
+class Lock2Value implements RawTileValue {
+  transform() { return new LockC(BLUE_KEY); }
+}
+
+class RawTile {
+  static readonly AIR = new RawTile(new AirValue());
+  static readonly FLUX = new RawTile(new FluxValue());
+  static readonly UNBREAKABLE = new RawTile(new UnbreakableValue());
+  static readonly PLAYER = new RawTile(new PlayerValue());
+  static readonly STONE = new RawTile(new StoneValue());
+  static readonly FALLING_STONE = new RawTile(new FallingStoneValue());
+  static readonly BOX = new RawTile(new BoxValue());
+  static readonly FALLING_BOX = new RawTile(new FallingBoxValue());
+  static readonly KEY1 = new RawTile(new Key1Value());
+  static readonly LOCK1 = new RawTile(new Lock1Value());
+  static readonly KEY2 = new RawTile(new Key2Value());
+  static readonly LOCK2 = new RawTile(new Lock2Value());
+  private constructor(private value: RawTileValue) { }
+  transform() {
+    return this.value.transform();
+  }
+}
+
+const RAW_TILES = [
+  RawTile.AIR,
+  RawTile.FLUX,
+  RawTile.UNBREAKABLE,
+  RawTile.PLAYER,
+  RawTile.STONE, RawTile.FALLING_STONE,
+  RawTile.BOX, RawTile.FALLING_BOX,
+  RawTile.KEY1, RawTile.LOCK1,
+  RawTile.KEY2, RawTile.LOCK2
+];
+
 
 interface Tile {
   update(x: number, y: number): void;
@@ -270,27 +400,6 @@ class Box implements Tile {
   isLock2() { return false; }
 }
 
-class KeyConfiguration {
-  constructor(
-    private color: string,
-    private _1: boolean,
-    private removeStrategy: RemoveStrategy
-  ) {}
-  // 해당 메서드는 문제가 되는 setter 가 아니다.
-  setColor(g: CanvasRenderingContext2D) {
-    g.fillStyle = this.color;
-  }
-  setFillRect(g: CanvasRenderingContext2D, x: number, y: number) {
-    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-  }
-  is1() {
-    return this._1;
-  }
-  removeLock() {
-    map.remove(this.removeStrategy);
-  }
-}
-
 class Key implements Tile {
   constructor(
     private keyConf: KeyConfiguration
@@ -404,7 +513,7 @@ class Up implements Input2 {
 }
 
 const player = new Player();
-let rawMap: RawTile[][] = [
+let rawMap: number[][] = [
   [2, 2, 2, 2, 2, 2, 2, 2],
   [2, 3, 0, 1, 1, 2, 0, 2],
   [2, 4, 2, 6, 1, 2, 0, 2],
@@ -415,12 +524,18 @@ let rawMap: RawTile[][] = [
 
 class Map {
   private map: Tile[][];
-  private getMap() {
-    return this.map;
+
+  constructor() {
+    this.map = new Array(rawMap.length);
+  
+    for (let y = 0; y < rawMap.length; y++) {
+      this.map[y] = new Array(rawMap[y].length);
+      for (let x = 0; x < rawMap[y].length; x++) {
+        this.map[y][x] = RAW_TILES[rawMap[y][x]].transform();
+      }
+    }
   }
-  setMap(map: Tile[][]) {
-    this.map = map;
-  }
+
   private setTile(x: number, y: number, tile: Tile) {
     this.map[y][x] = tile;
   }
@@ -441,16 +556,6 @@ class Map {
     for (let y = 0; y < this.map.length; y++) {
       for (let x = 0; x < this.map[y].length; x++) {
         this.map[y][x].draw(g, x, y);
-      }
-    }
-  }
-  transform() {
-    this.map = new Array(rawMap.length);
-  
-    for (let y = 0; y < rawMap.length; y++) {
-      this.map[y] = new Array(rawMap[y].length);
-      for (let x = 0; x < rawMap[y].length; x++) {
-        this.map[y][x] = transformTile(rawMap[y][x]);
       }
     }
   }
@@ -491,78 +596,6 @@ let inputs: Input2[] = [];
  */
 function assertExhausted(x: never): never {
   throw Error("Unexpected object: " + x);
-}
-
-interface FallingState {
-  isFalling(): boolean;
-  moveHorizontal(tile: Tile, dx: number): void;
-  /**
-   * FallingStrategy 에서 옮긴 메서드
-   * FallingStrategy.drop 에서 사용된 if 문이 FallingState 와 연관이 있어 옮김.
-   * 옮기게 되면 삼항 연산자에서 사용된 else 문도 사라지게 됨. 
-   */
-  drop(tile: Tile, x: number, y: number): void;
-}
-
-class Falling implements FallingState {
-  isFalling() {
-    return true;
-  }
-
-  moveHorizontal() {}
-  drop(tile: Tile, x: number, y: number) {
-    map.drop(x, y, tile);
-  }
-}
-
-class Resting implements FallingState {
-  isFalling() {
-    return false;
-  }
-
-  moveHorizontal(tile: Tile, dx: number) {
-    player.pushHorizontal(tile, dx);
-  }
-
-  drop() {}
-}
-
-
-function transformTile(title: RawTile) {
-  const YELLOW_KEY = new KeyConfiguration("#ffcc00", true, new RemoveLock1());
-  const BLUE_KEY = new KeyConfiguration("#00ccff", false, new RemoveLock2());
-
-  switch(title) {
-    case RawTile.AIR: return new Air();
-    case RawTile.FLUX: return new Flux();
-    case RawTile.UNBREAKABLE: return new Unbreakable();
-    case RawTile.PLAYER: return new PlayerTile();
-    case RawTile.STONE: return new Stone(new Resting());
-    case RawTile.FALLING_STONE: return new Stone(new Falling());
-    case RawTile.BOX: return new Box(new Resting());
-    case RawTile.FALLING_BOX: return new Box(new Falling());
-    case RawTile.KEY1: return new Key(YELLOW_KEY);
-    case RawTile.LOCK1: return new LockC(YELLOW_KEY);
-    case RawTile.KEY2: return new Key(BLUE_KEY);
-    case RawTile.LOCK2: return new LockC(BLUE_KEY);
-    default: return assertExhausted(title);
-  }
-}
-
-interface RemoveStrategy {
-  check(tile: Tile): boolean;
-}
-
-class RemoveLock1 implements RemoveStrategy {
-  check(tile: Tile) {
-    return tile.isLock1();
-  }
-}
-
-class RemoveLock2 implements RemoveStrategy {
-  check(tile: Tile) {
-    return tile.isLock2();
-  }
 }
 
 function update() {
@@ -607,7 +640,6 @@ function gameLoop() {
 }
 
 window.onload = () => {
-  map.transform();
   gameLoop();
 }
 
