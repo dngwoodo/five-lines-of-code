@@ -144,8 +144,8 @@ class Player {
     g.fillRect(this.x * TILE_SIZE, this.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
   }
   pushHorizontal(tile: Tile, dx: number) {
-    if (map[this.y][this.x + dx + dx].isAir() && !map[this.y + 1][this.x + dx].isAir()) {
-      map[this.y][this.x + dx + dx] = tile;
+    if (map.getMap()[this.y][this.x + dx + dx].isAir() && !map.getMap()[this.y + 1][this.x + dx].isAir()) {
+      map.getMap()[this.y][this.x + dx + dx] = tile;
       this.moveToTile(this.x + dx, this.y);
     }
   }
@@ -153,16 +153,16 @@ class Player {
     this.moveToTile(this.x + dx, this.y + dy);
   }
   moveToTile(newx: number, newy: number) {
-    map[this.y][this.x] = new Air(); // 현재 위치 빈공간으로 변경
-    map[newy][newx] = new PlayerTile(); // 새로운 위치에 player 이동
+    map.getMap()[this.y][this.x] = new Air(); // 현재 위치 빈공간으로 변경
+    map.getMap()[newy][newx] = new PlayerTile(); // 새로운 위치에 player 이동
     this.x = newx;
     this.y = newy;
   }
   moveHorizontal(dx: number) {
-    map[this.y][this.x + dx].moveHorizontal(dx);
+    map.getMap()[this.y][this.x + dx].moveHorizontal(dx);
   }
   moveVertical(dy: number) {
-    map[this.y + dy][this.x].moveVertical(dy);
+    map.getMap()[this.y + dy][this.x].moveVertical(dy);
   }
 }
 
@@ -194,6 +194,7 @@ class PlayerTile implements Tile {
   isKey2() { return false; }
   isLock2() { return false; }
 }
+
 class Stone implements Tile {
 
   private fallStrategy: FallStrategy;
@@ -369,7 +370,7 @@ class FallStrategy {
     this.falling.moveHorizontal(tile, dx);
   }
   update(x: number, y:number, tile: Tile) {
-    this.falling = map[y + 1][x].isAir() ? new Falling() : new Resting();
+    this.falling = map.getMap()[y + 1][x].isAir() ? new Falling() : new Resting();
     this.falling.drop(tile, x, y);
   }
 }
@@ -416,7 +417,18 @@ let rawMap: RawTile[][] = [
   [2, 2, 2, 2, 2, 2, 2, 2],
 ];
 
-let map: Tile[][];
+class Map {
+  private map: Tile[][];
+  getMap() {
+    return this.map;
+  }
+  setMap(map: Tile[][]) {
+    this.map = map;
+  }
+}
+
+
+let map = new Map();
 let inputs: Input2[] = [];
 
 /**
@@ -444,8 +456,8 @@ class Falling implements FallingState {
 
   moveHorizontal() {}
   drop(tile: Tile, x: number, y: number) {
-    map[y + 1][x] = tile; // 타일을 교체한 후
-    map[y][x] = new Air(); // 새로 공기를 주입
+    map.getMap()[y + 1][x] = tile; // 타일을 교체한 후
+    map.getMap()[y][x] = new Air(); // 새로 공기를 주입
   }
 }
 
@@ -484,17 +496,15 @@ function transformTile(title: RawTile) {
 }
 
 function transformMap() {
-  map = new Array(rawMap.length);
+  map.setMap(new Array(rawMap.length));
+
   for (let y = 0; y < rawMap.length; y++) {
-    map[y] = new Array(rawMap[y].length);
+    map.getMap()[y] = new Array(rawMap[y].length);
     for (let x = 0; x < rawMap[y].length; x++) {
-      map[y][x] = transformTile(rawMap[y][x]);
+      map.getMap()[y][x] = transformTile(rawMap[y][x]);
     }
   }
 }
-
-
-
 
 interface RemoveStrategy {
   check(tile: Tile): boolean;
@@ -513,10 +523,10 @@ class RemoveLock2 implements RemoveStrategy {
 }
 
 function remove(shouldRemove: RemoveStrategy) {
-  for (let y = 0; y < map.length; y++) {
-    for (let x = 0; x < map[y].length; x++) {
-      if (shouldRemove.check(map[y][x])) {
-        map[y][x] = new Air();
+  for (let y = 0; y < map.getMap().length; y++) {
+    for (let x = 0; x < map.getMap()[y].length; x++) {
+      if (shouldRemove.check(map.getMap()[y][x])) {
+        map.getMap()[y][x] = new Air();
       }
     }
   }
@@ -540,15 +550,15 @@ function handleInputs() {
 }
 
 function updateMap() {
-  for (let y = map.length - 1; y >= 0; y--) {
-    for (let x = 0; x < map[y].length; x++) {
+  for (let y = map.getMap().length - 1; y >= 0; y--) {
+    for (let x = 0; x < map.getMap()[y].length; x++) {
       updateTile(x, y);
     }
   } 
 }
 
 function updateTile(x: number, y: number) {
-  map[y][x].update(x, y);
+  map.getMap()[y][x].update(x, y);
 }
 
 function draw() {
@@ -570,9 +580,9 @@ function drawPlayer(g: CanvasRenderingContext2D) {
 }
 
 function drawMap(g: CanvasRenderingContext2D) {
-  for (let y = 0; y < map.length; y++) {
-    for (let x = 0; x < map[y].length; x++) {
-      map[y][x].draw(g, x, y);
+  for (let y = 0; y < map.getMap().length; y++) {
+    for (let x = 0; x < map.getMap()[y].length; x++) {
+      map.getMap()[y][x].draw(g, x, y);
     }
   }
 }
