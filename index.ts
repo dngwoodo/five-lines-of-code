@@ -380,19 +380,19 @@ class Right implements Input2 {
 
 class Left implements Input2 {
   handle() {
-    moveHorizontal(1);
+    moveHorizontal(-1);
   }
 }
 
 class Down implements Input2 {
   handle() {
-    moveHorizontal(1);
+    moveVertical(1);
   }
 }
 
 class Up implements Input2 {
   handle() {
-    moveHorizontal(1);
+    moveVertical(-1);
   }
 }
 
