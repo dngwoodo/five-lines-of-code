@@ -144,8 +144,8 @@ class Player {
     g.fillRect(this.x * TILE_SIZE, this.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
   }
   pushHorizontal(tile: Tile, dx: number) {
-    if (map.getMap()[this.y][this.x + dx + dx].isAir() && !map.getMap()[this.y + 1][this.x + dx].isAir()) {
-      map.getMap()[this.y][this.x + dx + dx] = tile;
+    if (map.isAir(this.x + dx + dx, this.y) && map.isAir(this.x + dx, this.y + 1)) {
+      map.setTile(this.x + dx + dx, this.y, tile);
       this.moveToTile(this.x + dx, this.y);
     }
   }
@@ -153,16 +153,15 @@ class Player {
     this.moveToTile(this.x + dx, this.y + dy);
   }
   moveToTile(newx: number, newy: number) {
-    map.getMap()[this.y][this.x] = new Air(); // 현재 위치 빈공간으로 변경
-    map.getMap()[newy][newx] = new PlayerTile(); // 새로운 위치에 player 이동
+    map.movePlayer(newx, newy, this.x, this.y);
     this.x = newx;
     this.y = newy;
   }
   moveHorizontal(dx: number) {
-    map.getMap()[this.y][this.x + dx].moveHorizontal(dx);
+    map.moveHorizontal(dx, this.x, this.y);
   }
   moveVertical(dy: number) {
-    map.getMap()[this.y + dy][this.x].moveVertical(dy);
+    map.moveVertical(dy, this.x, this.y);
   }
 }
 
@@ -291,7 +290,7 @@ class KeyConfiguration {
     return this._1;
   }
   removeLock() {
-    remove(this.removeStrategy);
+    map.remove(this.removeStrategy);
   }
 }
 
@@ -370,7 +369,7 @@ class FallStrategy {
     this.falling.moveHorizontal(tile, dx);
   }
   update(x: number, y:number, tile: Tile) {
-    this.falling = map.getMap()[y + 1][x].isAir() ? new Falling() : new Resting();
+    this.falling = map.isAir(x, y + 1) ? new Falling() : new Resting();
     this.falling.drop(tile, x, y);
   }
 }
@@ -419,11 +418,17 @@ let rawMap: RawTile[][] = [
 
 class Map {
   private map: Tile[][];
-  getMap() {
+  private getMap() {
     return this.map;
   }
   setMap(map: Tile[][]) {
     this.map = map;
+  }
+  setTile(x: number, y: number, tile: Tile) {
+    this.map[y][x] = tile;
+  }
+  isAir(x: number, y: number) {
+    return this.map[y][x].isAir();
   }
   draw(g: CanvasRenderingContext2D) {
     for (let y = 0; y < this.map.length; y++) {
@@ -448,6 +453,25 @@ class Map {
         this.map[y][x].update(x, y);
       }
     } 
+  }
+  movePlayer(newx: number, newy: number, x: number, y: number) {
+    this.map[y][x] = new Air(); // 현재 위치 빈공간으로 변경
+    this.map[newy][newx] = new PlayerTile(); // 새로운 위치에 player 이동
+  }
+  moveHorizontal(dx: number, x: number, y: number) {
+    this.map[y][x + dx].moveHorizontal(dx);
+  }
+  moveVertical(dy: number, x: number, y:number) {
+    this.map[y + dy][x].moveVertical(dy);
+  }
+  remove(shouldRemove: RemoveStrategy) {
+    for (let y = 0; y < this.map.length; y++) {
+      for (let x = 0; x < this.map[y].length; x++) {
+        if (shouldRemove.check(this.map[y][x])) {
+          this.map[y][x] = new Air();
+        }
+      }
+    }
   }
 }
 
@@ -480,8 +504,8 @@ class Falling implements FallingState {
 
   moveHorizontal() {}
   drop(tile: Tile, x: number, y: number) {
-    map.getMap()[y + 1][x] = tile; // 타일을 교체한 후
-    map.getMap()[y][x] = new Air(); // 새로 공기를 주입
+    map.setTile(x, y + 1, tile); // 아래로 한칸 이동
+    map.setTile(x, y, new Air()); // 현재 위치 빈공간으로 변경
   }
 }
 
@@ -533,20 +557,6 @@ class RemoveLock2 implements RemoveStrategy {
   check(tile: Tile) {
     return tile.isLock2();
   }
-}
-
-function remove(shouldRemove: RemoveStrategy) {
-  for (let y = 0; y < map.getMap().length; y++) {
-    for (let x = 0; x < map.getMap()[y].length; x++) {
-      if (shouldRemove.check(map.getMap()[y][x])) {
-        map.getMap()[y][x] = new Air();
-      }
-    }
-  }
-}
-
-function moveToTile(newx: number, newy: number) {
-  player.moveToTile(newx, newy);
 }
 
 function update() {
