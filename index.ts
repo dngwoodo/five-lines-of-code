@@ -22,10 +22,6 @@ interface Tile {
   update(x: number, y: number): void;
   isAir(): boolean;
   isFlux(): boolean;
-  isUnbreakable(): boolean;
-  isPlayer(): boolean;
-  isStone(): boolean;
-  isBox(): boolean;
   isFallingBox(): boolean;
   isFallingStone(): boolean;
   isKey1(): boolean;
@@ -36,19 +32,11 @@ interface Tile {
   isEdible(): boolean;
   isPushable(): boolean;
   moveHorizontal(dx: number): void;
-  drop(): void;
-  rest(): void;
   isFalling(): boolean;
-  canFall(): boolean;
 }
 
 class Air implements Tile {
   update() {}
-  drop() {}
-  rest() {}
-  canFall() {
-    return false;
-  }
   isFalling() {
     return false;
   }
@@ -64,10 +52,6 @@ class Air implements Tile {
   }
   isAir() { return true; }
   isFlux() { return false; }
-  isUnbreakable() { return false; }
-  isPlayer() { return false; }
-  isStone() { return false; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return false; }
@@ -77,11 +61,6 @@ class Air implements Tile {
 }
 class Flux implements Tile {
   update() {}
-  drop() {}
-  rest() {}
-  canFall() {
-    return false;
-  }
   isFalling() {
     return false;
   }
@@ -100,10 +79,6 @@ class Flux implements Tile {
   }
   isAir() { return false; }
   isFlux() { return true; }
-  isUnbreakable() { return false; }
-  isPlayer() { return false; }
-  isStone() { return false; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return false; }
@@ -113,12 +88,7 @@ class Flux implements Tile {
 }
 class Unbreakable implements Tile {
   update() {}
-  drop() {}
-  rest() {}
   isFalling() {
-    return false;
-  }
-  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -134,10 +104,6 @@ class Unbreakable implements Tile {
   moveHorizontal(dx: number): void {}
   isAir() { return false; }
   isFlux() { return false; }
-  isUnbreakable() { return true; }
-  isPlayer() { return false; }
-  isStone() { return false; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return false; }
@@ -147,11 +113,6 @@ class Unbreakable implements Tile {
 }
 class Player implements Tile {
   update() {}
-  drop() {}
-  rest() {}
-  canFall() {
-    return false;
-  }
   isFalling() {
     return false;
   }
@@ -165,10 +126,6 @@ class Player implements Tile {
   moveHorizontal(dx: number): void {}
   isAir() { return false; }
   isFlux() { return false; }
-  isUnbreakable() { return false; }
-  isPlayer() { return true; }
-  isStone() { return false; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return false; }
@@ -177,25 +134,14 @@ class Player implements Tile {
   isLock2() { return false; }
 }
 class Stone implements Tile {
+
+  private fallStrategy: FallStrategy;
   
-  constructor(private falling: FallingState) {}
+  constructor(private falling: FallingState) {
+    this.fallStrategy = new FallStrategy(falling);
+  }
   update(x: number, y: number) {
-    if (map[y + 1][x].isAir()) {
-      map[y][x].drop(); // 돌이나 상자를 떨어트리고(falling 상태 변경)
-      map[y + 1][x] = map[y][x]; // 타일을 교체한 후
-      map[y][x] = new Air(); // 새로 공기를 주입
-    } else if (map[y][x].isFalling()) {
-      map[y][x].rest();
-    }
-  }
-  drop() {
-    this.falling = new Falling();
-  }
-  rest() {
-    this.falling = new Resting();
-  }
-  canFall() {
-    return true;
+    this.fallStrategy.update(x, y, this);
   }
   isFalling() {
     return this.falling.isFalling();
@@ -212,14 +158,10 @@ class Stone implements Tile {
     return true;
   }
   moveHorizontal(dx: number): void {
-    this.falling.moveHorizontal(this, dx);
+    this.fallStrategy.getFalling().moveHorizontal(this, dx);
   }
   isAir() { return false; }
   isFlux() { return false; }
-  isUnbreakable() { return false; }
-  isPlayer() { return false; }
-  isStone() { return true; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return this.falling.isFalling() }
   isKey1() { return false; }
@@ -229,24 +171,12 @@ class Stone implements Tile {
 }
 
 class Box implements Tile {
-  constructor(private falling: FallingState) {}
+  private fallStrategy: FallStrategy;
+  constructor(private falling: FallingState) {
+    this.fallStrategy = new FallStrategy(falling);
+  }
   update(x: number, y: number) {
-    if (map[y + 1][x].isAir()) {
-      map[y][x].drop(); // 돌이나 상자를 떨어트리고(falling 상태 변경)
-      map[y + 1][x] = map[y][x]; // 타일을 교체한 후
-      map[y][x] = new Air(); // 새로 공기를 주입
-    } else if (map[y][x].isFalling()) {
-      map[y][x].rest();
-    }
-  }
-  drop() {
-    this.falling = new Falling();
-  }
-  rest() {
-    this.falling = new Resting();
-  }
-  canFall() {
-    return true;
+    this.fallStrategy.update(x, y, this);
   }
   isFalling() {
     return this.falling.isFalling();
@@ -266,10 +196,6 @@ class Box implements Tile {
   }
   isAir() { return false; }
   isFlux() { return false; }
-  isUnbreakable() { return false; }
-  isPlayer() { return false; }
-  isStone() { return false; }
-  isBox() { return true; }
   isFallingBox() { return this.falling.isFalling(); }
   isFallingStone() { return false; }
   isKey1() { return false; }
@@ -280,12 +206,7 @@ class Box implements Tile {
 
 class Key1 implements Tile {
   update() {}
-  drop() {}
-  rest() {}
   isFalling() {
-    return false;
-  }
-  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -297,10 +218,6 @@ class Key1 implements Tile {
   moveHorizontal(dx: number): void {}
   isAir() { return false; }
   isFlux() { return false; }
-  isUnbreakable() { return false; }
-  isPlayer() { return false; }
-  isStone() { return false; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return true; }
@@ -310,12 +227,7 @@ class Key1 implements Tile {
 }
 class Lock1 implements Tile {
   update() {}
-  drop() {}
-  rest() {}
   isFalling() {
-    return false;
-  }
-  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -327,10 +239,6 @@ class Lock1 implements Tile {
   moveHorizontal(dx: number): void {}
   isAir() { return false; }
   isFlux() { return false; }
-  isUnbreakable() { return false; }
-  isPlayer() { return false; }
-  isStone() { return false; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return false; }
@@ -340,12 +248,7 @@ class Lock1 implements Tile {
 }
 class Key2 implements Tile {
   update() {}
-  drop() {}
-  rest() {}
   isFalling() {
-    return false;
-  }
-  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -357,10 +260,6 @@ class Key2 implements Tile {
   moveHorizontal(dx: number): void {}
   isAir() { return false; }
   isFlux() { return false; }
-  isUnbreakable() { return false; }
-  isPlayer() { return false; }
-  isStone() { return false; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return false; }
@@ -370,12 +269,7 @@ class Key2 implements Tile {
 }
 class Lock2 implements Tile {
   update() {}
-  drop() {}
-  rest() {}
   isFalling() {
-    return false;
-  }
-  canFall() {
     return false;
   }
   draw(g: CanvasRenderingContext2D, x: number, y: number) {
@@ -387,16 +281,32 @@ class Lock2 implements Tile {
   moveHorizontal(dx: number): void {}
   isAir() { return false; }
   isFlux() { return false; }
-  isUnbreakable() { return false; }
-  isPlayer() { return false; }
-  isStone() { return false; }
-  isBox() { return false; }
   isFallingBox() { return false; }
   isFallingStone() { return false; }
   isKey1() { return false; }
   isLock1() { return false; }
   isKey2() { return false; }
   isLock2() { return true; }
+}
+
+class FallStrategy {
+  constructor(private falling: FallingState) {
+
+  }
+  getFalling() {
+    return this.falling;
+  }
+  update(x: number, y:number, tile: Tile) {
+    this.falling = map[y + 1][x].isAir() ? new Falling() : new Resting();
+    this.drop(x, y, tile);
+  }
+  private drop(x: number, y: number, tile: Tile) {
+    if (map[y + 1][x].isAir()) {
+      map[y + 1][x] = tile; // 타일을 교체한 후
+      map[y][x] = new Air(); // 새로 공기를 주입
+      return;
+    }
+  }
 }
 
 enum Input {
